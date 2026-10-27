@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "h1st0ry3d.oshelly",
+  "name": "Oshelly",
+  "version": "1.0.0",
+  "author": "h1st0ry3d",
+  "license": "MIT",
+  "description": "Run shell commands from the bar in your default terminal. Requires oshelly-cli, which reads ~/.config/oshelly/oshelly.conf.",
+  "kinds": [
+    "bar-widget",
+    "panel"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml",
+    "panel": "Panel.qml"
+  }
+}
