@@ -147,12 +147,20 @@ are done reading.
 The CLI uses, in order:
 
 1. `OSHELLY_TERMINAL`, if set.
-2. `omarchy-launch-terminal`, which is Omarchy's own launcher and starts the
+2. The choice saved with `oshelly terminal`.
+3. `omarchy-launch-terminal`, which is Omarchy's own launcher and starts the
    terminal through `uwsm`.
-3. `xdg-terminal-exec`.
-4. `$TERMINAL`.
-5. The first of ghostty, alacritty, kitty, foot, wezterm, konsole,
+4. `xdg-terminal-exec`.
+5. `$TERMINAL`.
+6. The first of ghostty, alacritty, kitty, foot, wezterm, konsole,
    gnome-terminal, xfce4-terminal and xterm that is installed.
+
+The panel has no terminal picker of its own. To force one for this machine:
+
+```sh
+oshelly terminal ghostty
+oshelly terminal default
+```
 
 `oshelly doctor` prints which one it found. To force one for the panel, export
 `OSHELLY_TERMINAL` in the environment the shell starts in:
