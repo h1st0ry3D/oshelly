@@ -13,6 +13,8 @@ Update system: omarchy update
 Tail the journal: journalctl -f
 ```
 
+![the panel](preview.png)
+
 The panel is only a front end. It runs [oshelly-cli][cli], which owns the
 config format and the terminal launch, so the same file drives the
 [macOS menu bar app][mac] and neither front end can disagree with the other
