@@ -145,6 +145,11 @@ Panel {
     readonly property int actionWatchdogMs: 15000
     readonly property int settingsWatchdogMs: 5000
 
+    // The power column on each command row. One glyph, so it is narrower than
+    // the command button.
+    readonly property int closeColumnWidth: Style.space(32)
+    readonly property int columnGap: Style.space(6)
+
     function refresh() {
         if (root.cliPath === "") return
         if (settingsProcess.running) {
@@ -248,6 +253,7 @@ Panel {
      */
     property string pendingAction: ""
     property string pendingName: ""
+    property string pendingValue: ""
     property bool actionTimedOut: false
 
     function beginAction(kind, name, status, command) {
@@ -268,6 +274,30 @@ Panel {
         if (root.cliPath === "" || actionProcess.running) return
         root.beginAction("run", String(name), "Launching " + root.plain(name, 60),
             [root.cliPath, "run", String(name)])
+    }
+
+    function applyCloseLocally(name, close) {
+        if (!root.loaded || !root.loaded.commands) return
+        var next = JSON.parse(JSON.stringify(root.loaded))
+        for (var index = 0; index < next.commands.length; index++) {
+            if (next.commands[index].name === name) next.commands[index].close = close
+        }
+        root.loaded = next
+    }
+
+    /*
+     * The power button on a row. It is a setting, not a launch, so it writes
+     * through the CLI and leaves the panel open. The local row changes first
+     * so the button answers the click; a failed write puts it back.
+     */
+    function toggleClose(entry) {
+        if (root.cliPath === "" || actionProcess.running) return
+        var on = entry.close !== true
+        root.pendingValue = on ? "on" : "off"
+        root.applyCloseLocally(entry.name, on)
+        root.beginAction("close", entry.name,
+            on ? "Closing the terminal after this command" : "Keeping the terminal open",
+            [root.cliPath, "set", "close", entry.name, on ? "on" : "off"])
     }
 
     /*
@@ -300,14 +330,26 @@ Panel {
             if (root.actionTimedOut) {
                 root.actionTimedOut = false
                 root.statusIsError = true
-                root.statusText = "oshelly did not answer."
-                root.statusDetail = root.pendingAction === "edit"
-                    ? "The config was not opened. Run `oshelly doctor` in a terminal."
-                    : "The command was not launched. Run `oshelly doctor` in a terminal."
+                if (root.pendingAction === "close") {
+                    root.applyCloseLocally(root.pendingName, root.pendingValue !== "on")
+                    root.statusText = "Could not change Close after run"
+                    root.statusDetail = "The setting was not saved. Run `oshelly doctor` in a terminal."
+                } else {
+                    root.statusText = "oshelly did not answer."
+                    root.statusDetail = root.pendingAction === "edit"
+                        ? "The config was not opened. Run `oshelly doctor` in a terminal."
+                        : "The command was not launched. Run `oshelly doctor` in a terminal."
+                }
                 return
             }
             if (code === 0) {
                 root.statusIsError = false
+                if (root.pendingAction === "close") {
+                    root.statusText = (root.pendingValue === "on"
+                        ? "Close after run: on for "
+                        : "Close after run: off for ") + root.plain(root.pendingName, 40)
+                    return
+                }
                 if (root.pendingAction === "edit") {
                     root.statusText = "Editing the config"
                 } else {
@@ -319,7 +361,10 @@ Panel {
                 return
             }
             root.statusIsError = true
-            if (root.pendingAction === "edit") {
+            if (root.pendingAction === "close") {
+                root.applyCloseLocally(root.pendingName, root.pendingValue !== "on")
+                root.statusText = "Could not change Close after run"
+            } else if (root.pendingAction === "edit") {
                 root.statusText = "Could not open the config"
             } else {
                 root.statusText = "Could not run " + root.plain(root.pendingName, 60)
@@ -548,7 +593,12 @@ Panel {
                             height: Style.space(34)
 
                             Button {
-                                anchors.fill: parent
+                                id: commandButton
+                                anchors.left: parent.left
+                                anchors.right: closeButton.left
+                                anchors.rightMargin: root.columnGap
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
                                 bordered: true
                                 enabled: !actionProcess.running
                                 // A click is the ordinary use; the cursor is
@@ -558,6 +608,29 @@ Panel {
                                 text: commandRow.modelData.name
                                 tooltipText: root.commandHint(commandRow.modelData.command)
                                 onClicked: root.launch(commandRow.modelData.name)
+                            }
+
+                            /*
+                             * The power button is the per-command close
+                             * setting. Selected means the terminal closes
+                             * after this command; unselected means it stays
+                             * open. It is a setting, so it writes through the
+                             * CLI and does not launch anything.
+                             */
+                            Button {
+                                id: closeButton
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: root.closeColumnWidth
+                                bordered: true
+                                enabled: !actionProcess.running
+                                selected: commandRow.modelData.close === true
+                                text: "\uf011"
+                                tooltipText: commandRow.modelData.close === true
+                                    ? "Terminal closes after this command"
+                                    : "Terminal stays open after this command"
+                                onClicked: root.toggleClose(commandRow.modelData)
                             }
                         }
                     }
@@ -585,7 +658,8 @@ Panel {
                     Text {
                         width: parent.width
                         visible: root.commands.length > 0 && !root.statusIsError
-                        text: "Click a command, or use the arrow keys and Enter."
+                        text: "Click a command, or use the arrow keys and Enter. "
+                            + "The power button closes the terminal after a command."
                         textFormat: Text.PlainText
                         color: Util.alpha(Color.foreground, 0.7)
                         font.family: Style.font.family

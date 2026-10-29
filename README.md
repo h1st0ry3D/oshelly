@@ -142,6 +142,12 @@ an interactive shell. A failed script has to stay on screen long enough to read
 the error, so the terminal does not close on its own. Close the window when you
 are done reading.
 
+Each row has a power button on the right. With it selected, the wrapper exits
+after the command instead of opening a shell, so the terminal closes the
+session. With it unselected, the terminal stays open. The choice is stored in
+`settings.json` and applies to the next run. A terminal profile configured to
+always keep the window open can still keep it after the shell exits.
+
 ### Which terminal
 
 The CLI uses, in order:
@@ -231,9 +237,9 @@ Fix the line and reopen the panel; no restart is needed.
 ## Design notes
 
 - The panel runs one program and owns none of the behaviour. It reads a list
-  with `list --json`, draws it, and sends a name with `run`. The config parser
-  and the terminal selection live in one place, so the panel and the macOS app
-  cannot drift.
+  with `list --json`, draws it, and sends a name with `run` or a setting with
+  `set close`. The config parser and the terminal selection live in one place,
+  so the panel and the macOS app cannot drift.
 - The panel builds an argv array and runs no shell. A name with a space or a
   quote cannot become a second command on the way to the CLI.
 - The panel inherits the session environment. That is the opposite of the
